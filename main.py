@@ -6,6 +6,7 @@ Telegram Bot — точка входа.
 import os
 import asyncio
 import logging
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
@@ -51,9 +52,14 @@ async def start_webhook(bot: Bot, dp: Dispatcher) -> None:
     logger.info(f"Запуск бота в режиме WEBHOOK: {WEBHOOK_URL}")
     await bot.set_webhook(WEBHOOK_URL)
 
+    # Извлекаем путь из WEBHOOK_URL (например, /preservation-ppt-tgbot)
+    webhook_path = urlparse(WEBHOOK_URL).path
+    if not webhook_path or webhook_path == "/":
+        webhook_path = "/webhook"
+
     app = web.Application()
     webhook_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
-    webhook_handler.register(app, path="/webhook")
+    webhook_handler.register(app, path=webhook_path)
     setup_application(app, dp, bot=bot)
 
     runner = web.AppRunner(app)
