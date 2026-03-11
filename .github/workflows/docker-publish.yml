@@ -43,3 +43,35 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Логинимся в GHCR (чтобы был доступ к скачиванию, даже если пакет приватный)
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Останавливаем старый контейнер (если есть)
+            docker rm -f preservation-ppt-tgbot || true
+            
+            # Скачиваем новый образ
+            docker pull ghcr.io/logos333/preservation_ppt_gen:latest
+            
+            # Запускаем новый контейнер с нужными флагами
+            docker run -d \
+              -p 8101:8101 \
+              --name preservation-ppt-tgbot \
+              -e TZ=Asia/Tashkent \
+              -v ~/preservation-photos:/app/photos \
+              --env-file ~/preservation_ppt_gen.env \
+              ghcr.io/logos333/preservation_ppt_gen:latest
+            
+            # Чистим старые неиспользуемые образы
+            docker image prune -a -f --filter "until=24h"
