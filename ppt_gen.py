@@ -122,7 +122,7 @@ def build_image_dictionary(images_folder):
         if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
             name_without_ext = os.path.splitext(filename)[0]
             parts = name_without_ext.split('-')
-            if '101-' in name_without_ext or '201-' in name_without_ext:
+            if name_without_ext.startswith('101-') or name_without_ext.startswith('201-'):
                 img_tag = parts[1].strip() if len(parts) > 1 else parts[0].strip()
             else:
                 img_tag = parts[0].strip()

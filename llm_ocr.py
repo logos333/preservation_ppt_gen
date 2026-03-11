@@ -26,7 +26,7 @@ LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini/gemini-2.5-flash")
 # Список известных тегов для few-shot подсказки
 KNOWN_TAGS: list[str] = [
     "D903B-1", "D903B-2", "D903B-3",
-    "201-EP458-1", "201-EP458-2",
+    "201EP458-1", "201EP458-2",
     "D303SP-1", "D303SP-2",
     "D304-1", "D304-2", "D304-3",
     "D303LP-1", "D303LP-2",
@@ -75,7 +75,8 @@ def _normalize_dashes(text: str) -> str:
 def _sanitize_filename(name: str) -> str:
     """Нормализует дефисы и очищает строку от символов, запрещённых в именах файлов."""
     name = _normalize_dashes(name)
-    sanitized = re.sub(r'[^\w\s\-]', '', name)
+    sanitized = re.sub(r'201EP458', '201-EP458', name)
+    sanitized = re.sub(r'[^\w\s\-]', '', sanitized)
     sanitized = re.sub(r'\s+', '', sanitized)
     return sanitized[:80] if sanitized else "unnamed"
 
