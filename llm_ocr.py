@@ -26,7 +26,7 @@ LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini/gemini-2.5-flash")
 # Список известных тегов для few-shot подсказки
 KNOWN_TAGS: list[str] = [
     "D903B-1", "D903B-2", "D903B-3",
-    "201EP458-1", "201EP458-2",
+    "201-EP458-1", "201-EP458-2",
     "D303SP-1", "D303SP-2",
     "D304-1", "D304-2", "D304-3",
     "D303LP-1", "D303LP-2",
