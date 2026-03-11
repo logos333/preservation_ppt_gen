@@ -32,8 +32,11 @@ HELP_TEXT: str = (
     "/time — Текущая дата и время\n"
     "/makeppt — Обработать фото через LLM и сгенерировать презентацию\n"
     "/cleardata — Удалить все фото из папки photos\n"
+    "/getppt — Скачать текущий шаблон презентации (template.pptx)\n"
     "/get_llm_model — Показать текущую LLM-модель\n"
-    "/help — Список команд"
+    "/help — Список команд\n\n"
+    "💡 <i>Чтобы загрузить новый шаблон, просто отправьте файл с именем <code>template.pptx</code>.\n"
+    "Чтобы удалить сохранённое фото, ответьте на него словом <code>delete</code>.</i>"
 )
 
 
@@ -114,6 +117,62 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         await message.reply(
             f"✅ Фото сохранено (будет обработано LLM при /makeppt)\n"
             f"📁 Папка: <code>{today_folder}</code>"
+        )
+
+
+# ==========================================
+# ОБРАБОТЧИК УДАЛЕНИЯ ФОТО (REPLY "delete")
+# ==========================================
+
+@router.message(F.text.lower() == "delete")
+async def handle_delete_reply(message: Message) -> None:
+    """Удаляет фото из файловой системы, если пользователь ответил 'delete' на сообщение с фото."""
+    if not message.reply_to_message or not message.reply_to_message.photo:
+        await message.reply("⚠️ Чтобы удалить фото, ответьте на само сообщение с фотографией словом 'delete'.")
+        return
+
+    today_folder = _get_today_folder()
+    replied_msg = message.reply_to_message
+
+    # Восстанавливаем имя файла так же, как при сохранении
+    if replied_msg.caption:
+        caption = replied_msg.caption.strip()
+        if not any(caption.lower().endswith(ext) for ext in IMAGE_EXTENSIONS):
+            caption += ".jpg"
+        filename = caption
+    else:
+        filename = f"temp_{replied_msg.message_id}.jpg"
+
+    file_path = today_folder / filename
+
+    if file_path.exists():
+        file_path.unlink()
+        await message.reply(f"🗑️ Фото <code>{filename}</code> успешно удалено с сервера.")
+        # Пытаемся удалить само сообщение с фото из чата
+        try:
+            await replied_msg.delete()
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение {replied_msg.message_id} в Telegram: {e}")
+    else:
+        await message.reply(f"⚠️ Фото <code>{filename}</code> не найдено на сервере (возможно, уже удалено или находится в папке за другой день).")
+
+
+# ==========================================
+# ОБРАБОТЧИК ШАБЛОНА (TEMPLATE.PPTX)
+# ==========================================
+
+@router.message(F.document & F.document.file_name.endswith(".pptx"))
+async def handle_template_upload(message: Message, bot: Bot) -> None:
+    """Обновляет файл template.pptx."""
+    doc = message.document
+    if doc.file_name.lower() == "template.pptx":
+        file = await bot.get_file(doc.file_id)
+        await bot.download_file(file.file_path, destination="template.pptx")
+        await message.reply("✅ Шаблон <code>template.pptx</code> успешно обновлён!")
+    else:
+        await message.reply(
+            "⚠️ Пожалуйста, переименуйте ваш файл в <code>template.pptx</code> перед отправкой, "
+            "если хотите обновить шаблон."
         )
 
 
@@ -199,6 +258,17 @@ async def cmd_cleardata(message: Message) -> None:
 async def cmd_get_llm_model(message: Message) -> None:
     """Показывает текущую LLM-модель из конфигурации."""
     await message.reply(f"🤖 Текущая LLM-модель: <code>{LLM_MODEL}</code>")
+
+
+@router.message(Command("getppt"))
+async def cmd_getppt(message: Message) -> None:
+    """Отправляет текущий шаблон template.pptx."""
+    template_path = Path("template.pptx")
+    if template_path.exists():
+        doc = FSInputFile(template_path, filename="template.pptx")
+        await message.reply_document(doc, caption="📁 Текущий шаблон презентации.")
+    else:
+        await message.reply("❌ Шаблон <code>template.pptx</code> не найден на сервере.")
 
 
 @router.message(Command("help", "start"))
