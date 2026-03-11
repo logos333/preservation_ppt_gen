@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+LABEL org.opencontainers.image.source=https://github.com/logos333/preservation_ppt_gen
+
 WORKDIR /app
 
 # Зависимости
