@@ -247,8 +247,11 @@ async def cmd_cleardata(message: Message) -> None:
     """Удаляет всё содержимое папки photos."""
     photos_dir = Path(PHOTOS_BASE_DIR)
     if photos_dir.exists():
-        shutil.rmtree(photos_dir)
-        photos_dir.mkdir(parents=True, exist_ok=True)
+        for item in photos_dir.iterdir():
+            if item.is_dir():
+                shutil.rmtree(item)
+            else:
+                item.unlink()
         await message.reply("🗑️ Все данные из папки photos удалены.")
     else:
         await message.reply("📁 Папка photos и так пуста.")
