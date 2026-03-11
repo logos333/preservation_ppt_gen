@@ -74,4 +74,4 @@ jobs:
               ghcr.io/logos333/preservation_ppt_gen:latest
             
             # Чистим старые неиспользуемые образы
-            docker image prune -a -f --filter "until=24h"
+            docker image prune -f
