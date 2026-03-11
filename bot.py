@@ -30,6 +30,7 @@ ALLOWED_CHAT_IDS: set[int] = {328556498, 7080816340}
 HELP_TEXT: str = (
     "📋 <b>Доступные команды:</b>\n\n"
     "/time — Текущая дата и время\n"
+    "/checkphotos — Показать список фото в текущей папке\n"
     "/makeppt — Обработать фото через LLM и сгенерировать презентацию\n"
     "/cleardata — Удалить все фото из папки photos\n"
     "/getppt — Скачать текущий шаблон презентации (template.pptx)\n"
@@ -240,6 +241,26 @@ async def cmd_makeppt(message: Message) -> None:
     except Exception as e:
         logger.error(f"Ошибка генерации презентации: {e}")
         await message.reply(f"❌ Ошибка генерации: {e}")
+
+
+@router.message(Command("checkphotos"))
+async def cmd_checkphotos(message: Message) -> None:
+    """Выводит список имен файлов в папке за сегодняшний день."""
+    today_folder = _get_today_folder()
+    photos = _get_photos_in_folder(today_folder)
+    
+    if not photos:
+        await message.reply("📂 Папка пуста.")
+        return
+        
+    lines = [f"📂 <b>Фото на сегодня ({len(photos)}):</b>"]
+    for p in photos:
+        lines.append(f"• <code>{p.name}</code>")
+        
+    # Разбиваем на чанки, если список очень длинный
+    text = "\n".join(lines)
+    for i in range(0, len(text), 4000):
+        await message.reply(text[i:i+4000])
 
 
 @router.message(Command("cleardata"))
