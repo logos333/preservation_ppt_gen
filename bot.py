@@ -231,13 +231,39 @@ async def cmd_makeppt(message: Message) -> None:
     # Шаг 2: Генерация презентации
     await message.reply("📊 Генерация презентации...")
     try:
-        output_path = await asyncio.to_thread(
+        output_path, report = await asyncio.to_thread(
             generate_presentation, str(today_folder)
         )
+        
         # Отправляем файл в чат
         doc = FSInputFile(output_path, filename=Path(output_path).name)
         await message.reply_document(doc, caption="✅ Презентация готова!")
         logger.info(f"Презентация отправлена: {output_path}")
+
+        # Формируем и отправляем отчет о расстановке фото
+        report_lines = ["📋 <b>Отчет о генерации:</b>\n"]
+        
+        if report.get("used"):
+            report_lines.append("✅ <b>Размещено на слайдах:</b>")
+            for slide_title, photos in report["used"].items():
+                report_lines.append(f"  • {slide_title}:")
+                for p in photos:
+                    report_lines.append(f"      - <code>{p}</code>")
+            report_lines.append("")
+            
+        if report.get("unused"):
+            report_lines.append("⚠️ <b>Не найдено соответствий (пропущено):</b>")
+            for p in report["unused"]:
+                report_lines.append(f"  - <code>{p}</code>")
+                
+        if len(report_lines) == 1:
+            report_lines.append("<i>Слайды не были изменены (теги не совпали)</i>")
+
+        # Отправляем длинный отчет частями, если нужно
+        report_text = "\n".join(report_lines)
+        for i in range(0, len(report_text), 4000):
+            await message.reply(report_text[i:i+4000])
+
     except Exception as e:
         logger.error(f"Ошибка генерации презентации: {e}")
         await message.reply(f"❌ Ошибка генерации: {e}")

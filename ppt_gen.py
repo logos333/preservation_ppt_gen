@@ -131,18 +131,18 @@ def build_image_dictionary(images_folder):
             
     return image_dict
 
-def get_slide_tag(slide):
-    """Находит верхний текст на слайде и извлекает из него тег (например, 'D903B')."""
+def get_slide_tag_and_text(slide):
+    """Находит верхний текст на слайде и извлекает из него (текст, тег)."""
     text_shapes = [s for s in slide.shapes if s.has_text_frame and s.text.strip()]
     if not text_shapes:
-        return None
+        return None, None
         
     top_shape = min(text_shapes, key=lambda s: s.top)
     top_text = top_shape.text.strip().split('\n')[0] 
     
     if '-' in top_text:
-        return top_text.split('-')[1].strip()
-    return None
+        return top_text, top_text.split('-')[1].strip()
+    return top_text, None
 
 def clear_slide_images(slide):
     """Удаляет все старые картинки с переданного слайда."""
@@ -223,8 +223,10 @@ def place_images_on_slide(slide, image_paths, slide_width):
         )
 
 def process_slide(prs, slide_index, current_date, image_dict, slide_width):
-    """Главная функция обработки одного слайда. Возвращает кол-во добавленных слайдов."""
+    """Главная функция обработки одного слайда. Возвращает (кол-во добавленных слайдов, заголовок, список использованных фото)."""
     slide = prs.slides[slide_index]
+    used_photos = []
+    slide_title = "Unknown"
 
     # 1. Замена даты на всех слайдах без исключения
     for shape in slide.shapes:
@@ -232,17 +234,22 @@ def process_slide(prs, slide_index, current_date, image_dict, slide_width):
         
     # 2. Логика замены картинок работает только с 3-й страницы (индекс 2)
     if slide_index < 2:
-        return 0
+        return 0, slide_title, used_photos
 
     # 3. Ищем тег. Если его нет — картинки на этом слайде не трогаем
-    slide_tag = get_slide_tag(slide)
+    top_text, slide_tag = get_slide_tag_and_text(slide)
+    if top_text:
+        slide_title = top_text
+
     if not slide_tag:
-        return 0
+        return 0, slide_title, used_photos
 
     # 4. Ищем новые картинки для этого тега. Если их нет — ничего не делаем
     matched_images = sorted(image_dict.get(slide_tag, []))
     if not matched_images:
-        return 0
+        return 0, slide_title, used_photos
+
+    used_photos = matched_images.copy()
 
     # 5. Разбиваем на группы по IMAGES_PER_SLIDE
     chunks = [matched_images[i:i + IMAGES_PER_SLIDE]
@@ -263,7 +270,7 @@ def process_slide(prs, slide_index, current_date, image_dict, slide_width):
         # Добавляем "(part 1)" к оригинальному слайду если есть продолжение
         append_part_label(slide, 1)
 
-    return added_slides
+    return added_slides, slide_title, used_photos
 
 # ==========================================
 # 3. ТОЧКА ВХОДА
@@ -272,8 +279,8 @@ def process_slide(prs, slide_index, current_date, image_dict, slide_width):
 def generate_presentation(
     images_folder: str = 'photos',
     template_path: str = 'template.pptx',
-) -> str:
-    """Генерирует презентацию из шаблона и фото. Возвращает путь к файлу."""
+) -> tuple[str, dict]:
+    """Генерирует презентацию из шаблона и фото. Возвращает (путь_к_файлу, отчет)."""
     current_date = datetime.now().strftime("%d-%B-%Y")
     new_file_path = f'MTO Preservation for {current_date}-Temur Khoshimov.pptx'
 
@@ -289,20 +296,35 @@ def generate_presentation(
 
     # Сбор данных
     image_dict = build_image_dictionary(images_folder)
-    print(f"Найдено тегов в папке с фото: {len(image_dict)}")
+    all_images = set()
+    for img_list in image_dict.values():
+        all_images.update(img_list)
+
+    print(f"Найдено картинок в папке: {len(all_images)}")
+
+    report = {"used": {}, "unused": []}
+    used_images = set()
 
     # Обработка слайдов (while-цикл, т.к. мы можем вставлять новые слайды)
     i = 0
     total_slides = len(prs.slides)
     while i < total_slides:
-        added = process_slide(prs, i, current_date, image_dict, slide_width)
+        added, slide_title, matched_photos = process_slide(prs, i, current_date, image_dict, slide_width)
+        if matched_photos:
+            report["used"][slide_title] = [os.path.basename(p) for p in matched_photos]
+            used_images.update(matched_photos)
+
         i += 1 + added
         total_slides += added
+
+    # Определяем неиспользованные фото
+    unused_images = all_images - used_images
+    report["unused"] = [os.path.basename(p) for p in sorted(unused_images)]
 
     # Сохранение результата
     prs.save(new_file_path)
     print(f"Успешно! Презентация сохранена как '{new_file_path}'")
-    return new_file_path
+    return new_file_path, report
 
 # Конструкция для правильного запуска Python-скриптов
 if __name__ == '__main__':
