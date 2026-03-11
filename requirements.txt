@@ -1,0 +1,5 @@
+aiogram==3.20.0.post0
+litellm==1.81.10
+python-pptx==1.0.2
+Pillow==12.1.1
+python-dotenv==1.1.0
