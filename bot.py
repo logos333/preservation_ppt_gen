@@ -171,9 +171,13 @@ async def handle_template_upload(message: Message, bot: Bot) -> None:
     """Обновляет файл template.pptx."""
     doc = message.document
     if doc.file_name.lower() == f"template_{message.from_user.id}.pptx":
-        file = await bot.get_file(doc.file_id)
-        await bot.download_file(file.file_path, destination=f"template_{message.from_user.id}.pptx")
-        await message.reply(f"✅ Шаблон <code>template_{message.from_user.id}.pptx</code> успешно обновлён!")
+        try:
+            file = await bot.get_file(doc.file_id)
+            await bot.download_file(file.file_path, destination=f"template_{message.from_user.id}.pptx")
+            await message.reply(f"✅ Шаблон <code>template_{message.from_user.id}.pptx</code> успешно обновлён!")
+        except Exception as e:
+            logger.error(f"Ошибка загрузки шаблона: {e}")
+            await message.reply(f"❌ Произошла ошибка при загрузке файла: {type(e).__name__}\nПодробнее: {e}")
     else:
         await message.reply(
             f"⚠️ Пожалуйста, переименуйте ваш файл в <code>template_{message.from_user.id}.pptx</code> перед отправкой, "
