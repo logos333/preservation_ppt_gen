@@ -236,7 +236,7 @@ async def cmd_makeppt(message: Message) -> None:
     await message.reply("📊 Генерация презентации...")
     try:
         output_path, report = await asyncio.to_thread(
-            generate_presentation, str(today_folder)
+            generate_presentation, str(today_folder), f"template_{message.from_user.id}.pptx"
         )
         
         # Отправляем файл в чат
