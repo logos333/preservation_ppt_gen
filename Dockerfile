@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Исходный код и шаблон
 COPY *.py .
-COPY template.pptx .
+COPY template_328556498.pptx .
 
 # Папка для фотографий (volume mount рекомендуется)
 RUN mkdir -p photos
