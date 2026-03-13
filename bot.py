@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
 
 PHOTOS_BASE_DIR: str = "photos"
 IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg")
-ALLOWED_CHAT_IDS: set[int] = {328556498, 7080816340}
+ALLOWED_CHAT_IDS: set[int] = {
+    328556498,  # Temur Kh
+    7080816340, # Temur Khoshimov
+    6340353400  # Vitaliy Chernikov
+}
 
 HELP_TEXT: str = (
     "📋 <b>Доступные команды:</b>\n\n"
@@ -33,10 +37,10 @@ HELP_TEXT: str = (
     "/checkphotos — Показать список фото в текущей папке\n"
     "/makeppt — Обработать фото через LLM и сгенерировать презентацию\n"
     "/cleardata — Удалить все фото из папки photos\n"
-    "/getppt — Скачать текущий шаблон презентации (template.pptx)\n"
+    "/getppt — Скачать текущий шаблон презентации (template_{user_id}.pptx)\n"
     "/get_llm_model — Показать текущую LLM-модель\n"
     "/help — Список команд\n\n"
-    "💡 <i>Чтобы загрузить новый шаблон, просто отправьте файл с именем <code>template.pptx</code>.\n"
+    "💡 <i>Чтобы загрузить новый шаблон, просто отправьте файл с именем <code>template_{user_id}.pptx</code>.\n"
     "Чтобы удалить сохранённое фото, ответьте на него словом <code>delete</code>.</i>"
 )
 
@@ -166,13 +170,13 @@ async def handle_delete_reply(message: Message) -> None:
 async def handle_template_upload(message: Message, bot: Bot) -> None:
     """Обновляет файл template.pptx."""
     doc = message.document
-    if doc.file_name.lower() == "template.pptx":
+    if doc.file_name.lower() == f"template_{message.from_user.id}.pptx":
         file = await bot.get_file(doc.file_id)
-        await bot.download_file(file.file_path, destination="template.pptx")
-        await message.reply("✅ Шаблон <code>template.pptx</code> успешно обновлён!")
+        await bot.download_file(file.file_path, destination=f"template_{message.from_user.id}.pptx")
+        await message.reply(f"✅ Шаблон <code>template_{message.from_user.id}.pptx</code> успешно обновлён!")
     else:
         await message.reply(
-            "⚠️ Пожалуйста, переименуйте ваш файл в <code>template.pptx</code> перед отправкой, "
+            f"⚠️ Пожалуйста, переименуйте ваш файл в <code>template_{message.from_user.id}.pptx</code> перед отправкой, "
             "если хотите обновить шаблон."
         )
 
@@ -313,12 +317,12 @@ async def cmd_get_llm_model(message: Message) -> None:
 @router.message(Command("getppt"))
 async def cmd_getppt(message: Message) -> None:
     """Отправляет текущий шаблон template.pptx."""
-    template_path = Path("template.pptx")
+    template_path = Path(f"template_{message.from_user.id}.pptx")
     if template_path.exists():
-        doc = FSInputFile(template_path, filename="template.pptx")
+        doc = FSInputFile(template_path, filename=f"template_{message.from_user.id}.pptx")
         await message.reply_document(doc, caption="📁 Текущий шаблон презентации.")
     else:
-        await message.reply("❌ Шаблон <code>template.pptx</code> не найден на сервере.")
+        await message.reply(f"❌ Шаблон <code>template_{message.from_user.id}.pptx</code> не найден на сервере.")
 
 
 @router.message(Command("help", "start"))

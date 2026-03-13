@@ -133,7 +133,7 @@ def build_image_dictionary(images_folder):
 
 def get_slide_tag_and_text(slide):
     """Находит верхний текст на слайде и извлекает из него (текст, тег)."""
-    text_shapes = [s for s in slide.shapes if s.has_text_frame and s.text.strip()]
+    text_shapes = [s for s in slide.shapes if s.has_text_frame and len(s.text.strip()) < 20 and '-' in s.text.strip() and s.text.strip()]
     if not text_shapes:
         return None, None
         
@@ -233,7 +233,7 @@ def process_slide(prs, slide_index, current_date, image_dict, slide_width):
         replace_text(shape, '{{DATE}}', current_date)
         
     # 2. Логика замены картинок работает только с 3-й страницы (индекс 2)
-    if slide_index < 2:
+    if slide_index < 1:
         return 0, slide_title, used_photos
 
     # 3. Ищем тег. Если его нет — картинки на этом слайде не трогаем
@@ -278,7 +278,7 @@ def process_slide(prs, slide_index, current_date, image_dict, slide_width):
 
 def generate_presentation(
     images_folder: str = 'photos',
-    template_path: str = 'template.pptx',
+    template_path: str = 'template_328556498.pptx',
 ) -> tuple[str, dict]:
     """Генерирует презентацию из шаблона и фото. Возвращает (путь_к_файлу, отчет)."""
     current_date = datetime.now().strftime("%d-%B-%Y")

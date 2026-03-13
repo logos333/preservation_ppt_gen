@@ -46,6 +46,11 @@ EXTRACTION_PROMPT: str = (
     "Do NOT add any explanation, quotes, or extra characters — just the tag value."
 )
 
+IGNORE_PREFIXES: list[str] = [
+    "101",
+    "201",
+]
+
 # Отключаем лишние логи LiteLLM
 litellm.suppress_debug_info = True
 
@@ -75,7 +80,14 @@ def _normalize_dashes(text: str) -> str:
 def _sanitize_filename(name: str) -> str:
     """Нормализует дефисы и очищает строку от символов, запрещённых в именах файлов."""
     name = _normalize_dashes(name)
-    sanitized = re.sub(r'201EP458', '201-EP458', name)
+
+    sanitized = name
+    for prefix in IGNORE_PREFIXES:
+        if sanitized.startswith(prefix):
+            sanitized = sanitized[len(prefix):]
+        if sanitized.startswith('-'):
+            sanitized = sanitized[1:]
+
     sanitized = re.sub(r'[^\w\s\-]', '', sanitized)
     sanitized = re.sub(r'\s+', '', sanitized)
     return sanitized[:80] if sanitized else "unnamed"
